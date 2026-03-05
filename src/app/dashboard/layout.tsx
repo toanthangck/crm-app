@@ -5,6 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { ToastProvider } from '@/components/ToastProvider';
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession();
@@ -44,9 +45,15 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { href: '/dashboard/companies', label: 'Công ty', icon: '🏢', section: 'main' },
         { href: '/dashboard/deals', label: 'Deals', icon: '💰', section: 'sales' },
         { href: '/dashboard/activities', label: 'Hoạt động', icon: '✅', section: 'sales' },
+        { href: '/dashboard/settings', label: 'Cài đặt', icon: '⚙️', section: 'system' },
     ];
 
-    const pageTitle = navItems.find(item => pathname === item.href)?.label || 'CRM Pro';
+    const isActive = (href: string) => {
+        if (href === '/dashboard') return pathname === '/dashboard';
+        return pathname.startsWith(href);
+    };
+
+    const pageTitle = navItems.find(item => isActive(item.href))?.label || 'CRM Pro';
 
     return (
         <div className="app-layout">
@@ -62,7 +69,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     <div className="sidebar-section">
                         <div className="sidebar-section-title">Tổng quan</div>
                         {navItems.filter(i => i.section === 'main').map(item => (
-                            <Link key={item.href} href={item.href} className={`nav-link ${pathname === item.href ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
+                            <Link key={item.href} href={item.href} className={`nav-link ${isActive(item.href) ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                                 <span className="nav-icon">{item.icon}</span>
                                 {item.label}
                             </Link>
@@ -72,7 +79,17 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     <div className="sidebar-section">
                         <div className="sidebar-section-title">Bán hàng</div>
                         {navItems.filter(i => i.section === 'sales').map(item => (
-                            <Link key={item.href} href={item.href} className={`nav-link ${pathname === item.href ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
+                            <Link key={item.href} href={item.href} className={`nav-link ${isActive(item.href) ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
+                                <span className="nav-icon">{item.icon}</span>
+                                {item.label}
+                            </Link>
+                        ))}
+                    </div>
+
+                    <div className="sidebar-section">
+                        <div className="sidebar-section-title">Hệ thống</div>
+                        {navItems.filter(i => i.section === 'system').map(item => (
+                            <Link key={item.href} href={item.href} className={`nav-link ${isActive(item.href) ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                                 <span className="nav-icon">{item.icon}</span>
                                 {item.label}
                             </Link>
@@ -82,7 +99,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
                 <div className="sidebar-footer">
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', textAlign: 'center' }}>
-                        CRM Pro v1.0 © 2026
+                        CRM Pro v2.0 © 2026
                     </div>
                 </div>
             </aside>
@@ -110,6 +127,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
                             {userMenuOpen && (
                                 <div className="dropdown-menu">
+                                    <Link href="/dashboard/settings" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                                        ⚙️ Cài đặt
+                                    </Link>
                                     <button className="dropdown-item danger" onClick={() => signOut({ callbackUrl: '/login' })}>
                                         🚪 Đăng xuất
                                     </button>
@@ -130,7 +150,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <SessionProvider>
-            <DashboardContent>{children}</DashboardContent>
+            <ToastProvider>
+                <DashboardContent>{children}</DashboardContent>
+            </ToastProvider>
         </SessionProvider>
     );
 }

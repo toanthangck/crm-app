@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useToast } from '@/components/ToastProvider';
 
 const TYPE_ICONS: Record<string, string> = { call: '📞', email: '📧', meeting: '🤝', note: '📝' };
 const TYPE_LABELS: Record<string, string> = { call: 'Cuộc gọi', email: 'Email', meeting: 'Cuộc họp', note: 'Ghi chú' };
@@ -9,6 +10,7 @@ const STATUS_LABELS: Record<string, string> = { todo: 'Chờ xử lý', in_progr
 
 export default function ActivitiesPage() {
     const { data: session } = useSession();
+    const { showToast } = useToast();
     const [activities, setActivities] = useState<any[]>([]);
     const [contacts, setContacts] = useState<any[]>([]);
     const [deals, setDeals] = useState<any[]>([]);
@@ -49,21 +51,22 @@ export default function ActivitiesPage() {
     const handleSave = async () => {
         const method = editing ? 'PUT' : 'POST';
         const url = editing ? `/api/activities/${editing.id}` : '/api/activities';
-        await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-        setShowModal(false);
-        fetchActivities();
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+        if (res.ok) { showToast('success', editing ? 'Đã cập nhật hoạt động' : 'Đã thêm hoạt động mới'); setShowModal(false); fetchActivities(); }
+        else showToast('error', 'Có lỗi xảy ra');
     };
 
     const toggleStatus = async (a: any) => {
         const next = a.status === 'todo' ? 'in_progress' : a.status === 'in_progress' ? 'done' : 'todo';
         await fetch(`/api/activities/${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
+        showToast('info', `Đổi trạng thái → ${STATUS_LABELS[next]}`);
         fetchActivities();
     };
 
     const handleDelete = async (id: string) => {
         if (!confirm('Bạn có chắc muốn xóa?')) return;
-        await fetch(`/api/activities/${id}`, { method: 'DELETE' });
-        fetchActivities();
+        const res = await fetch(`/api/activities/${id}`, { method: 'DELETE' });
+        if (res.ok) { showToast('success', 'Đã xóa hoạt động'); fetchActivities(); }
     };
 
     if (loading) return <div className="loading-spinner"><div className="spinner"></div></div>;
@@ -131,60 +134,18 @@ export default function ActivitiesPage() {
                         </div>
                         <div className="modal-body">
                             <div className="form-row">
-                                <div className="form-group">
-                                    <label>Loại *</label>
-                                    <select className="form-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
-                                        <option value="call">📞 Cuộc gọi</option>
-                                        <option value="email">📧 Email</option>
-                                        <option value="meeting">🤝 Cuộc họp</option>
-                                        <option value="note">📝 Ghi chú</option>
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Trạng thái</label>
-                                    <select className="form-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                                        <option value="todo">Chờ xử lý</option>
-                                        <option value="in_progress">Đang làm</option>
-                                        <option value="done">Hoàn thành</option>
-                                    </select>
-                                </div>
+                                <div className="form-group"><label>Loại *</label><select className="form-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}><option value="call">📞 Cuộc gọi</option><option value="email">📧 Email</option><option value="meeting">🤝 Cuộc họp</option><option value="note">📝 Ghi chú</option></select></div>
+                                <div className="form-group"><label>Trạng thái</label><select className="form-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}><option value="todo">Chờ xử lý</option><option value="in_progress">Đang làm</option><option value="done">Hoàn thành</option></select></div>
                             </div>
-                            <div className="form-group">
-                                <label>Tiêu đề *</label>
-                                <input className="form-input" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
-                            </div>
-                            <div className="form-group">
-                                <label>Mô tả</label>
-                                <textarea className="form-input" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} />
+                            <div className="form-group"><label>Tiêu đề *</label><input className="form-input" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required /></div>
+                            <div className="form-group"><label>Mô tả</label><textarea className="form-input" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} /></div>
+                            <div className="form-row">
+                                <div className="form-group"><label>Liên hệ</label><select className="form-input" value={form.contact_id} onChange={e => setForm({ ...form, contact_id: e.target.value })}><option value="">— Chọn —</option>{contacts.map((c: any) => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}</select></div>
+                                <div className="form-group"><label>Deal</label><select className="form-input" value={form.deal_id} onChange={e => setForm({ ...form, deal_id: e.target.value })}><option value="">— Chọn —</option>{deals.map((d: any) => <option key={d.id} value={d.id}>{d.title}</option>)}</select></div>
                             </div>
                             <div className="form-row">
-                                <div className="form-group">
-                                    <label>Liên hệ</label>
-                                    <select className="form-input" value={form.contact_id} onChange={e => setForm({ ...form, contact_id: e.target.value })}>
-                                        <option value="">— Chọn —</option>
-                                        {contacts.map((c: any) => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Deal</label>
-                                    <select className="form-input" value={form.deal_id} onChange={e => setForm({ ...form, deal_id: e.target.value })}>
-                                        <option value="">— Chọn —</option>
-                                        {deals.map((d: any) => <option key={d.id} value={d.id}>{d.title}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Phụ trách</label>
-                                    <select className="form-input" value={form.user_id} onChange={e => setForm({ ...form, user_id: e.target.value })}>
-                                        <option value="">— Chọn —</option>
-                                        {users.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Ngày hẹn</label>
-                                    <input className="form-input" type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
-                                </div>
+                                <div className="form-group"><label>Phụ trách</label><select className="form-input" value={form.user_id} onChange={e => setForm({ ...form, user_id: e.target.value })}><option value="">— Chọn —</option>{users.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>
+                                <div className="form-group"><label>Ngày hẹn</label><input className="form-input" type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} /></div>
                             </div>
                         </div>
                         <div className="modal-footer">
