@@ -36,7 +36,8 @@ export default function RegisterPage() {
             if (!res.ok) {
                 setError(data.error);
             } else {
-                router.push('/login');
+                // Redirect to email verification
+                router.push(`/verify-email?email=${encodeURIComponent(email)}`);
             }
         } catch {
             setError('Có lỗi xảy ra, vui lòng thử lại');
@@ -49,7 +50,7 @@ export default function RegisterPage() {
         <div className="auth-container">
             <div className="auth-card">
                 <div className="auth-logo">
-                    <h1>CRM Pro</h1>
+                    <h1>💎 CRM Pro</h1>
                     <p>Tạo tài khoản mới</p>
                 </div>
 

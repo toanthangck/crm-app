@@ -3,6 +3,7 @@ import bcryptjs from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import getDb from '@/lib/db';
 import { seedDatabase } from '@/lib/seed';
+import { sendVerificationEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
     try {
@@ -27,9 +28,20 @@ export async function POST(request: Request) {
         const passwordHash = bcryptjs.hashSync(password, 10);
         const id = uuidv4();
 
-        db.prepare('INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)').run(id, name, email, passwordHash, 'sales_rep');
+        // Create user with email_verified = 0
+        db.prepare('INSERT INTO users (id, name, email, password_hash, role, email_verified) VALUES (?, ?, ?, ?, ?, ?)').run(id, name, email, passwordHash, 'sales_rep', 0);
 
-        return NextResponse.json({ message: 'Đăng ký thành công' }, { status: 201 });
+        // Generate and send verification code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+        db.prepare('INSERT INTO email_verification_codes (id, user_id, code, expires_at) VALUES (?, ?, ?, ?)').run(uuidv4(), id, code, expiresAt);
+
+        const result = await sendVerificationEmail(email, name, code);
+
+        return NextResponse.json({
+            message: 'Đăng ký thành công. Vui lòng xác thực email.',
+            ...(result.previewUrl ? { previewUrl: result.previewUrl } : {}),
+        }, { status: 201 });
     } catch (error) {
         console.error('Register error:', error);
         return NextResponse.json({ error: 'Có lỗi xảy ra' }, { status: 500 });

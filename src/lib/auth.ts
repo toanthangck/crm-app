@@ -26,6 +26,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 const isValid = bcryptjs.compareSync(credentials.password as string, user.password_hash);
                 if (!isValid) return null;
 
+                // Check email verification
+                if (user.email_verified === 0) {
+                    throw new Error('EMAIL_NOT_VERIFIED');
+                }
+
                 return {
                     id: user.id,
                     name: user.name,

@@ -77,6 +77,10 @@ export default function LoginPage() {
                     <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={loading}>
                         {loading ? '⏳ Đang đăng nhập...' : '🔐 Đăng nhập'}
                     </button>
+
+                    <div style={{ textAlign: 'right', marginTop: 12 }}>
+                        <Link href="/forgot-password" style={{ fontSize: '0.85rem', color: 'var(--accent-primary)' }}>Quên mật khẩu?</Link>
+                    </div>
                 </form>
 
                 <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -85,7 +89,7 @@ export default function LoginPage() {
 
                 <div style={{ marginTop: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     <strong>Demo accounts:</strong><br />
-                    Admin: admin@crm.com / admin123<br />
+                    Admin: admin@crm.com / abcd1234<br />
                     User: nguyen@crm.com / user123
                 </div>
             </div>

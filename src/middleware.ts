@@ -7,7 +7,7 @@ export async function middleware(req: NextRequest) {
     const isLoggedIn = !!token;
     const { pathname } = req.nextUrl;
 
-    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register');
+    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/forgot-password') || pathname.startsWith('/reset-password') || pathname.startsWith('/verify-email');
     const isDashboardPage = pathname.startsWith('/dashboard');
 
     if (isAuthPage && isLoggedIn) {
