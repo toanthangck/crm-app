@@ -4,26 +4,31 @@ import bcryptjs from 'bcryptjs';
 
 export async function POST(request: Request) {
     try {
-        const { token, password } = await request.json();
-        if (!token || !password) return NextResponse.json({ error: 'Thiếu thông tin' }, { status: 400 });
+        const { email, code, password } = await request.json();
+        if (!email || !code || !password) return NextResponse.json({ error: 'Thiếu thông tin' }, { status: 400 });
         if (password.length < 6) return NextResponse.json({ error: 'Mật khẩu phải có ít nhất 6 ký tự' }, { status: 400 });
 
         const db = getDb();
 
+        const user = db.prepare('SELECT id FROM users WHERE email = ?').get(email) as any;
+        if (!user) return NextResponse.json({ error: 'Mã không đúng hoặc đã hết hạn' }, { status: 400 });
+
+        const dbToken = `${user.id}:${code}`;
+
         const resetToken = db.prepare(`
-      SELECT prt.*, u.email, u.name
-      FROM password_reset_tokens prt
-      JOIN users u ON u.id = prt.user_id
-      WHERE prt.token = ? AND prt.used = 0 AND prt.expires_at > datetime('now')
-    `).get(token) as any;
+      SELECT *
+      FROM password_reset_tokens
+      WHERE user_id = ? AND token = ? AND used = 0 AND expires_at > datetime('now')
+      ORDER BY created_at DESC LIMIT 1
+    `).get(user.id, dbToken) as any;
 
         if (!resetToken) {
-            return NextResponse.json({ error: 'Link đã hết hạn hoặc không hợp lệ' }, { status: 400 });
+            return NextResponse.json({ error: 'Mã không hợp lệ hoặc đã hết hạn' }, { status: 400 });
         }
 
         // Update password
         const hash = bcryptjs.hashSync(password, 10);
-        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, resetToken.user_id);
+        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, user.id);
 
         // Mark token as used
         db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?').run(resetToken.id);

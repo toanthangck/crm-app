@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import getDb from '@/lib/db';
 import { v4 as uuid } from 'uuid';
-import crypto from 'crypto';
 import { sendPasswordResetEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
@@ -12,27 +11,26 @@ export async function POST(request: Request) {
         const db = getDb();
         const user = db.prepare('SELECT id, name, email FROM users WHERE email = ?').get(email) as any;
 
-        // Always return success to prevent email enumeration
         if (!user) {
-            return NextResponse.json({ message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu' });
+            return NextResponse.json({ message: 'Nếu email tồn tại, bạn sẽ nhận được mã đặt lại mật khẩu' });
         }
 
-        // Generate secure token
-        const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+        // Generate 6-digit code
+        const token = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
 
         // Invalidate old tokens
         db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE user_id = ?').run(user.id);
 
-        // Save new token
-        db.prepare('INSERT INTO password_reset_tokens (id, user_id, token, expires_at) VALUES (?, ?, ?, ?)').run(uuid(), user.id, token, expiresAt);
+        // Save new code. Store user.id:token to avoid unique constraint collisions just in case
+        const dbToken = `${user.id}:${token}`;
+        db.prepare('INSERT INTO password_reset_tokens (id, user_id, token, expires_at) VALUES (?, ?, ?, ?)').run(uuid(), user.id, dbToken, expiresAt);
 
         // Send email
         const result = await sendPasswordResetEmail(user.email, user.name, token);
 
         return NextResponse.json({
-            message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu',
-            // Include preview URL in development
+            message: 'Nếu email tồn tại, bạn sẽ nhận được mã đặt lại mật khẩu',
             ...(result.previewUrl ? { previewUrl: result.previewUrl } : {}),
         });
     } catch (error) {
